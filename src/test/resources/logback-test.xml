@@ -1,0 +1,19 @@
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Keep the integration-test output readable; raise org.testcontainers to DEBUG to
+         diagnose Docker discovery problems. -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <logger name="com.bharath.financetracker" level="INFO"/>
+    <logger name="org.testcontainers" level="INFO"/>
+    <logger name="org.flywaydb" level="INFO"/>
+</configuration>

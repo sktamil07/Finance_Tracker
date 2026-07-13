@@ -1,0 +1,113 @@
+-- Finance Tracker :: initial schema
+-- All money is DECIMAL(15,2). All `month` columns are DATE pinned to the 1st of the month.
+-- Every user-owned table carries user_id and is always queried filtered by the authenticated user.
+
+CREATE TABLE users
+(
+    id               BIGINT       NOT NULL AUTO_INCREMENT,
+    name             VARCHAR(100) NOT NULL,
+    email            VARCHAR(255) NOT NULL,
+    password_hash    VARCHAR(100) NOT NULL,
+    currency_code    VARCHAR(3)   NOT NULL DEFAULT 'INR',
+    theme_preference VARCHAR(10)  NOT NULL DEFAULT 'SYSTEM',
+    created_at       DATETIME(6)  NOT NULL,
+    updated_at       DATETIME(6)  NOT NULL,
+    CONSTRAINT pk_users PRIMARY KEY (id),
+    CONSTRAINT uk_users_email UNIQUE (email)
+) ENGINE = InnoDB;
+
+CREATE TABLE categories
+(
+    id             BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id        BIGINT      NOT NULL,
+    name           VARCHAR(60) NOT NULL,
+    type           VARCHAR(20) NOT NULL,
+    icon           VARCHAR(60) NULL,
+    system_default BIT(1)      NOT NULL DEFAULT b'0',
+    created_at     DATETIME(6) NOT NULL,
+    CONSTRAINT pk_categories PRIMARY KEY (id),
+    CONSTRAINT uk_categories_user_name_type UNIQUE (user_id, name, type),
+    CONSTRAINT fk_categories_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+CREATE INDEX idx_categories_user_type ON categories (user_id, type);
+
+CREATE TABLE incomes
+(
+    id         BIGINT         NOT NULL AUTO_INCREMENT,
+    user_id    BIGINT         NOT NULL,
+    month      DATE           NOT NULL,
+    amount     DECIMAL(15, 2) NOT NULL,
+    source     VARCHAR(100)   NOT NULL DEFAULT 'Salary',
+    created_at DATETIME(6)    NOT NULL,
+    CONSTRAINT pk_incomes PRIMARY KEY (id),
+    CONSTRAINT fk_incomes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB;
+
+CREATE INDEX idx_incomes_user_month ON incomes (user_id, month);
+
+CREATE TABLE investments
+(
+    id                     BIGINT         NOT NULL AUTO_INCREMENT,
+    user_id                BIGINT         NOT NULL,
+    name                   VARCHAR(120)   NOT NULL,
+    amount                 DECIMAL(15, 2) NOT NULL,
+    category_id            BIGINT         NOT NULL,
+    month                  DATE           NOT NULL,
+    roi_notes              TEXT           NULL,
+    recurring              BIT(1)         NOT NULL DEFAULT b'0',
+    recurring_day_of_month INT            NULL,
+    maturity_date          DATE           NULL,
+    created_at             DATETIME(6)    NOT NULL,
+    updated_at             DATETIME(6)    NOT NULL,
+    CONSTRAINT pk_investments PRIMARY KEY (id),
+    CONSTRAINT fk_investments_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_investments_category FOREIGN KEY (category_id) REFERENCES categories (id),
+    CONSTRAINT ck_investments_recurring_day CHECK (recurring_day_of_month IS NULL OR
+                                                   (recurring_day_of_month BETWEEN 1 AND 31))
+) ENGINE = InnoDB;
+
+CREATE INDEX idx_investments_user_month ON investments (user_id, month);
+CREATE INDEX idx_investments_user_maturity ON investments (user_id, maturity_date);
+CREATE INDEX idx_investments_category ON investments (category_id);
+
+CREATE TABLE expenses
+(
+    id               BIGINT         NOT NULL AUTO_INCREMENT,
+    user_id          BIGINT         NOT NULL,
+    description      VARCHAR(255)   NOT NULL,
+    amount           DECIMAL(15, 2) NOT NULL,
+    category_id      BIGINT         NOT NULL,
+    transaction_date DATE           NOT NULL,
+    notes            VARCHAR(500)   NULL,
+    created_at       DATETIME(6)    NOT NULL,
+    updated_at       DATETIME(6)    NOT NULL,
+    CONSTRAINT pk_expenses PRIMARY KEY (id),
+    CONSTRAINT fk_expenses_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_expenses_category FOREIGN KEY (category_id) REFERENCES categories (id)
+) ENGINE = InnoDB;
+
+CREATE INDEX idx_expenses_user_txn_date ON expenses (user_id, transaction_date);
+CREATE INDEX idx_expenses_category ON expenses (category_id);
+
+CREATE TABLE budget_goals
+(
+    id           BIGINT         NOT NULL AUTO_INCREMENT,
+    user_id      BIGINT         NOT NULL,
+    category_id  BIGINT         NOT NULL,
+    limit_amount DECIMAL(15, 2) NOT NULL,
+    -- NULL month => the limit recurs every month.
+    -- Non-NULL month => the limit applies to that month only and overrides the recurring row.
+    month        DATE           NULL,
+    created_at   DATETIME(6)    NOT NULL,
+    CONSTRAINT pk_budget_goals PRIMARY KEY (id),
+    CONSTRAINT fk_budget_goals_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_budget_goals_category FOREIGN KEY (category_id) REFERENCES categories (id),
+    -- MySQL treats NULLs as distinct in a UNIQUE key, so this only guards the month-specific
+    -- rows. Uniqueness of the single recurring row per (user, category) is enforced in
+    -- BudgetServiceImpl.
+    CONSTRAINT uk_budget_goals_user_category_month UNIQUE (user_id, category_id, month)
+) ENGINE = InnoDB;
+
+CREATE INDEX idx_budget_goals_user_month ON budget_goals (user_id, month);
+CREATE INDEX idx_budget_goals_category ON budget_goals (category_id);
