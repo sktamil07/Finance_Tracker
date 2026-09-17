@@ -13,14 +13,14 @@
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://10.190.227.10:8098/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "https://finance-tracker-z1kg.onrender.com/api/v1"
       }
     },
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://10.190.227.10:8098/api/v1"
+        "EXPO_PUBLIC_API_BASE_URL": "https://finance-tracker-z1kg.onrender.com/api/v1"
       }
     }
   },
