@@ -1,24 +1,54 @@
-# Local MySQL 8 for development. Not used by the tests — those spin up their own
-# throwaway MySQL container via Testcontainers.
+# Local deployment: PostgreSQL 16 + the Spring Boot API, together.
+#   docker compose up --build      # build image + start both
+#   docker compose logs -f app     # follow API logs
+#   docker compose down            # stop (add -v to also wipe the DB volume)
+#
+# The API is published on http://localhost:8098 (and your PC's LAN IP:8098 for a
+# phone on the same Wi-Fi). Override any value below via a .env file next to this
+# compose file. Note the integration tests are NOT run here — they use
+# Testcontainers and need their own Docker access; run them with `mvn verify`.
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: finance-tracker-mysql
+  postgres:
+    image: postgres:16-alpine
+    container_name: finance-tracker-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: ${DB_NAME:-finance_tracker}
-      MYSQL_USER: ${DB_USERNAME:-finance}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me-locally}
+      POSTGRES_DB: ${DB_NAME:-finance_tracker}
+      POSTGRES_USER: ${DB_USERNAME:-finance}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me-locally}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - finance-tracker-mysql-data:/var/lib/mysql
+      - finance-tracker-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME:-finance} -d ${DB_NAME:-finance_tracker}" ]
       interval: 5s
       timeout: 5s
       retries: 20
 
+  app:
+    build:
+      context: .
+    image: finance-tracker-api:local
+    container_name: finance-tracker-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8098
+      # Inside the compose network the DB host is the service name, NOT localhost.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-finance_tracker}
+      DB_USERNAME: ${DB_USERNAME:-finance}
+      DB_PASSWORD: ${DB_PASSWORD:-change-me-locally}
+      # HS256 needs >= 32 bytes. Fine for local; set a real secret for anything shared.
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me-please-at-least-32-bytes-long-000}
+      # Native apps ignore CORS; these matter only if a browser calls the API.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:8081}
+    ports:
+      - "8098:8098"
+
 volumes:
-  finance-tracker-mysql-data:
+  finance-tracker-postgres-data:

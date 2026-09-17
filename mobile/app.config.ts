@@ -48,5 +48,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Mirror the public env var so it is also reachable via expo-constants if
     // a consumer prefers Constants.expoConfig.extra over process.env.
     apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? '',
+    // EAS project id. `eas init` creates the project and prints this id; because
+    // this config is dynamic, paste it here (or export EAS_PROJECT_ID) so cloud
+    // builds can link to your Expo account's project.
+    eas: {
+      projectId: process.env.EAS_PROJECT_ID,
+    },
   },
 });

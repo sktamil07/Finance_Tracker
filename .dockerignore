@@ -1,0 +1,21 @@
+# Keep the build context small & clean. The mobile app lives in this repo but is
+# NOT part of the backend image — excluding it (and its node_modules) is critical.
+mobile/
+node_modules/
+
+# Build output & IDE
+target/
+.idea/
+*.iml
+.mvn/wrapper/maven-wrapper.jar
+
+# VCS & local env
+.git/
+.gitignore
+*.env
+.env
+.env.*
+
+# Docs / misc
+README.md
+*.md

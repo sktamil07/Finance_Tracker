@@ -1,6 +1,6 @@
 # Finance Tracker — Backend
 
-Multi-user personal finance API. Java 21, Spring Boot 3.3, MySQL 8 + Flyway, stateless JWT.
+Multi-user personal finance API. Java 21, Spring Boot 3.3, PostgreSQL 16 + Flyway, stateless JWT.
 
 Every user-owned row carries a `user_id` and every query is filtered by the authenticated user.
 No derived figure (savings, savings rate, allocation, budget status) is ever stored — it is all
@@ -10,14 +10,14 @@ computed at request time from the raw amounts.
 
 ## Quick start
 
-Prerequisites: **JDK 21**, **Docker** (for the local MySQL and for the integration tests). Maven is
+Prerequisites: **JDK 21**, **Docker** (for the local PostgreSQL and for the integration tests). Maven is
 not required — the repo ships the Maven Wrapper.
 
 ```bash
 cp .env.example .env          # then edit it
 set -a && . ./.env && set +a  # export the vars into your shell
 
-docker compose up -d          # MySQL 8 on ${DB_PORT:-3306}
+docker compose up -d          # PostgreSQL 16 on ${DB_PORT:-5432}
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
@@ -45,7 +45,7 @@ All secrets come from the environment. Nothing has a default except host/port/db
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` | no | `localhost` / `3306` / `finance_tracker` | |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` | no | `localhost` / `5432` / `finance_tracker` | |
 | `DB_USERNAME` / `DB_PASSWORD` | **yes** | — | |
 | `JWT_SECRET` | **yes** | — | ≥ 32 bytes (HS256). `openssl rand -base64 48` |
 | `CORS_ALLOWED_ORIGINS` | no | `http://localhost:5173,http://localhost:3000` | comma-separated frontend origins |
@@ -73,7 +73,7 @@ run `validate`, so a drift between the entities and `V1__init_schema.sql` fails 
 ```
 
 - `*Test` → unit tests (surefire). Dashboard/report arithmetic and budget thresholds, with mocks.
-- `*IT` → integration tests (failsafe). Boot the real app against a throwaway MySQL 8 container.
+- `*IT` → integration tests (failsafe). Boot the real app against a throwaway PostgreSQL 16 container.
 
 Because the integration tests run Flyway and then Hibernate `ddl-auto: validate`, **every one of
 them doubles as a check that the migration and the entity mappings agree.**
@@ -92,7 +92,7 @@ and the dashboard/report aggregates.
 
 ## Architecture
 
-Base package `com.bharath.financetracker`, organised **package-by-feature**:
+Base package `com.financetracker`, organised **package-by-feature**:
 
 ```
 auth  user  category  income  investment  expense  budget  dashboard  report  settings
@@ -261,7 +261,7 @@ also seeded so the expense breakdown, budget status, and report are not empty on
 ## Layout
 
 ```
-src/main/java/com/bharath/financetracker/
+src/main/java/com/financetracker/
 ├── FinanceTrackerApplication.java
 ├── auth/          register, login, refresh
 ├── user/          User entity, /users/me
