@@ -62,3 +62,22 @@ services:
       # Free instances are 512 MB; let the JVM size its heap to the container.
       - key: JAVA_TOOL_OPTIONS
         value: -XX:MaxRAMPercentage=70.0
+
+  # ---- Frontend: the Expo app exported as a static web bundle ----
+  # The mobile/ app is React Native; `expo export --platform web` produces a
+  # plain static site in mobile/dist that Render can serve. This is what puts a
+  # UI on a URL — the API service above serves JSON only and has no pages.
+  - type: web
+    name: finance-tracker-web
+    runtime: static
+    buildCommand: cd mobile && npm ci && npx expo export --platform web
+    staticPublishPath: mobile/dist
+    envVars:
+      # Metro inlines EXPO_PUBLIC_* at build time, so this must be set here.
+      - key: EXPO_PUBLIC_API_BASE_URL
+        value: https://finance-tracker-z1kg.onrender.com/api/v1
+    routes:
+      # Single-page app: send every unknown path to index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html
