@@ -87,13 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const tokens = await loadTokens();
-      if (!tokens) {
-        if (!cancelled) setStatus('unauthenticated');
-        return;
-      }
-      setAuthTokens(tokens);
       try {
+        const tokens = await loadTokens();
+        if (!tokens) {
+          if (!cancelled) setStatus('unauthenticated');
+          return;
+        }
+        setAuthTokens(tokens);
         const { data } = await api.get<UserResponse>('/users/me');
         if (cancelled) return;
         hydrateFromUser(data);
