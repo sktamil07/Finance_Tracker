@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -31,6 +32,27 @@ public class SecurityConfig {
             "/swagger-ui/**",
     };
 
+    /**
+     * The Expo web bundle is packaged into the JAR (see Dockerfile) and served from the same
+     * origin as the API, so the single-page app and its assets must be reachable without a token.
+     * SpaWebConfig forwards unknown non-API paths to index.html for client-side routing.
+     */
+    private static final String[] STATIC_PATHS = {
+            "/",
+            "/index.html",
+            "/favicon.ico",
+            "/metadata.json",
+            "/_expo/**",
+            "/assets/**",
+    };
+
+    /**
+     * Any GET outside /api/ is either a bundled asset or a client-side route, and both are public.
+     * API calls keep requiring a token; only the shell that talks to them is open.
+     */
+    private static final RequestMatcher SPA_ROUTE_MATCHER = request ->
+            HttpMethod.GET.matches(request.getMethod()) && !request.getRequestURI().startsWith("/api/");
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
@@ -45,6 +67,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers(STATIC_PATHS).permitAll()
+                        // Anything that is not an API call is an SPA route -> index.html.
+                        .requestMatchers(SPA_ROUTE_MATCHER).permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)

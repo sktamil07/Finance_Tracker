@@ -1,10 +1,11 @@
-# Render Blueprint for the Finance Tracker API.
+# Render Blueprint for Finance Tracker.
 #
-# Deploys the Spring Boot backend from the multi-stage Dockerfile plus a managed
-# PostgreSQL 16 instance, and wires the DB credentials into the app automatically.
+# ONE web service: the multi-stage Dockerfile builds the Expo web UI, bakes it
+# into the Spring Boot JAR, and the container serves the UI at / and the API at
+# /api/v1 on the same origin. Plus a managed PostgreSQL 16 instance whose
+# credentials are wired into the app automatically.
 #
 # Apply it from the Render dashboard: New > Blueprint, then point at this repo.
-# Note this is the BACKEND only; `mobile/` is excluded via .dockerignore.
 
 databases:
   - name: finance-tracker-db
@@ -55,29 +56,11 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # sync: false => set this in the dashboard, not in git.
+      # UI and API share one origin, so CORS only matters if some OTHER origin
+      # calls the API. Optional — set it in the dashboard if needed.
       - key: CORS_ALLOWED_ORIGINS
         sync: false
 
       # Free instances are 512 MB; let the JVM size its heap to the container.
       - key: JAVA_TOOL_OPTIONS
         value: -XX:MaxRAMPercentage=70.0
-
-  # ---- Frontend: the Expo app exported as a static web bundle ----
-  # The mobile/ app is React Native; `expo export --platform web` produces a
-  # plain static site in mobile/dist that Render can serve. This is what puts a
-  # UI on a URL — the API service above serves JSON only and has no pages.
-  - type: web
-    name: finance-tracker-web
-    runtime: static
-    buildCommand: cd mobile && npm ci && npx expo export --platform web
-    staticPublishPath: mobile/dist
-    envVars:
-      # Metro inlines EXPO_PUBLIC_* at build time, so this must be set here.
-      - key: EXPO_PUBLIC_API_BASE_URL
-        value: https://finance-tracker-z1kg.onrender.com/api/v1
-    routes:
-      # Single-page app: send every unknown path to index.html.
-      - type: rewrite
-        source: /*
-        destination: /index.html

@@ -1,7 +1,11 @@
-# Keep the build context small & clean. The mobile app lives in this repo but is
-# NOT part of the backend image — excluding it (and its node_modules) is critical.
-mobile/
+# Keep the build context small & clean. The mobile/ sources ARE needed now — the
+# image builds the Expo web bundle and bakes it into the JAR — but its installed
+# and generated directories must stay out (npm ci reinstalls them in the image).
 node_modules/
+mobile/node_modules/
+mobile/dist/
+mobile/.expo/
+mobile/web-build/
 
 # Build output & IDE
 target/
@@ -15,6 +19,8 @@ target/
 *.env
 .env
 .env.*
+mobile/.env
+mobile/.env.*
 
 # Docs / misc
 README.md
